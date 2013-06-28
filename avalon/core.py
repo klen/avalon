@@ -1,7 +1,8 @@
 """ Core Avalon classes. """
-from mixer.auto import mixer
-import random
 from operator import and_, or_
+
+import random
+from mixer.auto import mixer
 
 
 def story(action=None, **kwargs):
@@ -27,10 +28,12 @@ class Story(object):
     guard = staticmethod(lambda x: True)
 
     def __init__(
-            self, queue, chance=None, guard=None, weight=100, operator=and_):
+            self, queue, chance=None, guard=None, weight=100, operator=and_,
+            timeout=10):
         self.queue = queue
         self.weight = weight
         self.operator = operator
+        self.timeout = timeout
 
         self.__name__ = queue[0].__name__ if queue else 'story'
 
@@ -47,10 +50,36 @@ class Story(object):
 
             self.guard = guard
 
+    def __str__(self):
+        return self.__name__
+
     def __repr__(self):
-        return '<Story "%s">' % self.__name__
+        return '<Story "%s">' % str(self)
 
     def __call__(self, param=None):
+        """ Run story syncronisly.
+
+        :return object: A result
+
+        """
+        it = iter(self)
+
+        for (action, guard) in it:
+
+            if not guard(param):
+                continue
+
+            args = [param] if param else []
+            param = action(*args)
+
+        return param
+
+    def __iter__(self):
+        """ Iterate story actions.
+
+        :return generator: Action's generator
+
+        """
         queue = list(self.queue)
         st = self
 
@@ -78,15 +107,12 @@ class Story(object):
 
             if isinstance(action, Story):
                 st = action
+                g = iter(st)
+                for (action, guard) in g:
+                    yield (action, guard)
 
-            if st.guard and not st.guard(param):
-
-                return param
-
-            args = [param] if param else []
-            param = action(*args)
-
-        return param
+            else:
+                yield (action, st.guard)
 
     def __and__(self, s):
         return self.__operation__(s)
@@ -100,7 +126,7 @@ class Story(object):
 
         st_ = Story(
             list(self.queue), guard=self.guard, weight=self.weight,
-            operator=operator)
+            operator=operator, timeout=self.timeout)
         st_.queue.append(st)
         return st_
 

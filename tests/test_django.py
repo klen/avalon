@@ -45,7 +45,7 @@ class AvalonDjangoTest(TestCase):
         st = create & (verified | rejected)
 
         statuses = []
-        for _ in range(20):
+        for _ in range(50):
             user = st()
             statuses.append(user.is_active)
         self.assertTrue(True in statuses)
