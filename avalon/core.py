@@ -13,6 +13,9 @@ def story(action=None, **kwargs):
     """
 
     if action:
+        if isinstance(action, Story):
+            return Story(action.queue, **kwargs)
+
         return Story([action], **kwargs)
 
     def wrapper(action):
@@ -29,9 +32,10 @@ class Story(object):
 
     def __init__(
             self, queue, chance=None, guard=None, weight=100, operator=and_,
-            timeout=10):
+            cycle=1, timeout=10):
         self.queue = queue
         self.weight = weight
+        self.cycle = cycle
         self.operator = operator
         self.timeout = timeout
 
@@ -112,7 +116,8 @@ class Story(object):
                     yield (action, guard)
 
             else:
-                yield (action, st.guard)
+                for _ in range(self.cycle):
+                    yield (action, st.guard)
 
     def __and__(self, s):
         return self.__operation__(s)
@@ -126,7 +131,7 @@ class Story(object):
 
         st_ = Story(
             list(self.queue), guard=self.guard, weight=self.weight,
-            operator=operator, timeout=self.timeout)
+            operator=operator, timeout=self.timeout, cycle=self.cycle)
         st_.queue.append(st)
         return st_
 

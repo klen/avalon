@@ -1,5 +1,4 @@
 from unittest import TestCase
-from tornado.testing import AsyncTestCase
 
 
 class AvalonMainTest(TestCase):
@@ -61,6 +60,17 @@ class AvalonMainTest(TestCase):
         actions = list(g)
         self.assertEqual(len(actions), 2)
 
+        @story(cycle=3)
+        def get_twice(pipe=1):
+            pipe += 1
+            return pipe
+        self.assertEqual(get_twice.cycle, 3)
+        self.assertEqual(get_twice(), 4)
+
+        st = story(get_twice, cycle=2)
+        self.assertEqual(st.cycle, 2)
+        self.assertEqual(st(1), 3)
+
     def test_guard(self):
         import random
         from avalon.core import story
@@ -76,27 +86,33 @@ class AvalonMainTest(TestCase):
         self.assertTrue(None in results)
 
 
-class AvalonTest(AsyncTestCase):
+class AvalonTest(TestCase):
 
     def test_avalon(self):
 
-        from avalon.engine import Avalon
-        from avalon import story
+        from avalon import Avalon, avalon
 
-        av = Avalon(self.io_loop)
+        av = Avalon()
+        self.assertTrue(av.io_loop)
 
-        @story(timeout=.5)
-        def stop():
-            self.stop()
+    def test_script(self):
+        from avalon import story, Avalon, Script
+        from datetime import timedelta
 
-        av.make_story(stop)
+        av = Avalon()
 
-        self.wait()
-        self.wait()
+        @story
+        def bad_story():
+            raise ValueError('Im bad')
 
-    def test_stories(self):
-        from .stories import test_story
-        from avalon.engine import Avalon
+        script = av.register(bad_story, timeout=.5)
+        self.assertTrue(script.avalon)
+        self.assertEqual(script.timeout, .5)
 
-        av = Avalon(self.io_loop)
-        av.make_story(test_story)
+        script.begin(.1)
+        self.assertEqual(script.timeout, .1)
+
+        av.start()
+
+        script = Script(bad_story, timeout=timedelta(hours=3))
+        self.assertEqual(script.timeout, 10800)

@@ -1,21 +1,22 @@
-from django.conf import settings
+from .settings import *  # noqa
 
-settings.configure(
-    ROOT_URLCONF='tests.django_app.urls',
-    DEBUG=True,
-    DATABASES={
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
-            'USER': '',
-            'PASSWORD': '',
-            'TEST_CHARSET': 'utf8',
-        }
-    },
-    INSTALLED_APPS=(
-        'django.contrib.contenttypes',
-        'django.contrib.auth',
-        'tests.django_app',)
-)
+from django.contrib.auth.models import User
+from django.db import models
+
+
+class Post(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    rating = models.PositiveIntegerField(default=0)
+
+    user = models.ForeignKey(User)
+
+
+class Comment(models.Model):
+    body = models.CharField(max_length=256)
+    user = models.ForeignKey(User)
+    post = models.ForeignKey(Post)
+
 
 # lint_ignore=C0110

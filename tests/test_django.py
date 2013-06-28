@@ -1,6 +1,7 @@
-from unittest import TestCase
-from .django_app.models import *  # noqa
 from django.core.management import call_command
+from unittest import TestCase
+
+from .django_app.models import *  # noqa
 
 
 class AvalonDjangoTest(TestCase):
@@ -15,7 +16,6 @@ class AvalonDjangoTest(TestCase):
 
     def test_actor(self):
         from avalon.core import Actor
-        from django.contrib.auth.models import User
 
         user = Actor(User)
         self.assertTrue(user)
@@ -24,7 +24,6 @@ class AvalonDjangoTest(TestCase):
 
     def test_action(self):
         from avalon.core import story, Actor
-        from django.contrib.auth.models import User
 
         @story
         def create():
@@ -50,3 +49,8 @@ class AvalonDjangoTest(TestCase):
             statuses.append(user.is_active)
         self.assertTrue(True in statuses)
         self.assertTrue(False in statuses)
+
+    def test_avalon(self):
+        from tests.django_app.script import avalon
+
+        self.assertEqual(len(avalon.scripts), 4)
