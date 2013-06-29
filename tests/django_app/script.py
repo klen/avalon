@@ -31,7 +31,7 @@ def write_comment(post=None):
         post = Post.objects.order_by('?')[0]
 
     mixer.blend(
-        Comment, post=Post, user=mixer.select(is_active=True))
+        Comment, post=post, user=mixer.select(is_active=True))
 
     return post
 

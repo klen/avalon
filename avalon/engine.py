@@ -2,12 +2,13 @@
 from __future__ import absolute_import
 
 import time
+from datetime import timedelta
 
 import logging
-from tornado.ioloop import IOLoop
 from tornado import gen, log
+from tornado.ioloop import IOLoop
+
 from .core import Story
-from datetime import timedelta
 
 
 logger = logging.getLogger('Avalon')
@@ -63,7 +64,8 @@ class Script(object):
                     pipe = action(*args)
                 except Exception as e:  # noqa
                     logger.error(e)
-                    logger.error('Script has exceptions. Stop stories.')
+                    logger.error(
+                        'Script has exceptions. Stop story: %s.', self.story)
                     self.avalon.forget(self)
                     if not self.avalon.io_loop._stopped:  # noqa
                         raise gen.Return('Stopped.')
@@ -72,10 +74,7 @@ class Script(object):
 
             pipe = yield gen.Task(callback, pipe)
 
-            yield gen.Task(
-                self.avalon.io_loop.add_timeout,
-                time.time() + self.timeout
-            )
+            yield self.avalon.add_timeout(self.timeout, async=True)
 
         self.begin()
 
@@ -88,16 +87,17 @@ class Script(object):
         if timeout:
             self.timeout = timeout
 
-        self.avalon.io_loop.add_timeout(time.time() + self.timeout, self)
+        self.avalon.add_timeout(self.timeout, self)
 
 
 class Avalon(object):
 
     """ IOLoop. """
 
-    def __init__(self, io_loop=None):
+    def __init__(self, io_loop=None, spam=False):
         self.io_loop = io_loop or IOLoop.instance()
         self.scripts = set()
+        self.spam = False
 
     def start(self):
         """ Start IOLoop. """
@@ -105,6 +105,10 @@ class Avalon(object):
             raise RuntimeError('Stories hasn\'t been found. Setup them first.')
 
         logger.info('Start Avalon.')
+
+        for script in list(self.scripts):
+            script.begin()
+
         self.io_loop.start()
 
     def stop(self):
@@ -131,11 +135,45 @@ class Avalon(object):
         self.scripts.add(script)
         return script
 
+    def rewind(self, seconds=10):
+        """ Spam stories.
+
+        Disable timeouts.
+
+        """
+        self.spam = True
+
+        def stop():
+            logger.info('Stop spam.')
+            self.io_loop.stop()
+
+        self.io_loop.add_timeout(time.time() + seconds, stop)
+        self.start()
+
     def forget(self, script):
         """ Remove a script from the Avalon. """
         self.scripts.remove(script)
         if not self.scripts:
             self.stop()
+
+    def add_timeout(self, timeout, callback=None, async=False):
+        """ Pause story execution.
+
+        :return object: Callback's result.
+
+        """
+        if not callback:
+            callback = lambda callback: callback()
+
+        if self.spam:
+            timeout = 0
+
+        deadline = time.time() + timeout
+
+        if async:
+            return gen.Task(self.io_loop.add_timeout, deadline)
+
+        return self.io_loop.add_timeout(deadline, callback)
 
 
 avalon = Avalon()

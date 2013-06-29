@@ -54,3 +54,7 @@ class AvalonDjangoTest(TestCase):
         from tests.django_app.script import avalon
 
         self.assertEqual(len(avalon.scripts), 4)
+        avalon.rewind(1)
+        self.assertTrue(User.objects.count())
+        self.assertTrue(Post.objects.count())
+        self.assertTrue(Comment.objects.count())

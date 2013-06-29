@@ -109,9 +109,6 @@ class AvalonTest(TestCase):
         self.assertTrue(script.avalon)
         self.assertEqual(script.timeout, .5)
 
-        script.begin(.1)
-        self.assertEqual(script.timeout, .1)
-
         av.start()
 
         script = Script(bad_story, timeout=timedelta(hours=3))
